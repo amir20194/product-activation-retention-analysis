@@ -1,5 +1,5 @@
 -- Baseline product KPIs
--- Activation = user creates a project within 7 days of signup.
+-- Activation = user creates at least one project within 7 days of signup.
 -- D30 retention = user has a dashboard_viewed event between day 30 and day 40.
 
 WITH user_metrics AS (
@@ -38,6 +38,15 @@ WITH user_metrics AS (
 
 SELECT
     COUNT(*) AS total_signups,
-    ROUND(100.0 * SUM(activated) / COUNT(*), 2) AS activation_rate_pct,
-    ROUND(100.0 * SUM(retained_d30) / COUNT(*), 2) AS d30_retention_rate_pct
+
+    ROUND(
+        100.0 * SUM(activated) / COUNT(*),
+        2
+    ) AS activation_rate_pct,
+
+    ROUND(
+        100.0 * SUM(retained_d30) / COUNT(*),
+        2
+    ) AS d30_retention_rate_pct
+
 FROM user_metrics;
