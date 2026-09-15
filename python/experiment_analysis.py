@@ -1,8 +1,11 @@
 from math import ceil
 from scipy.stats import norm
 
+# Baseline D30 retention among project creators
+# who did not invite a teammate.
+baseline_rate = 0.2624
 
-baseline_rate = 0.45
+# Target = 5 percentage point absolute improvement in D30 retention.
 mde = 0.05
 
 alpha = 0.05
