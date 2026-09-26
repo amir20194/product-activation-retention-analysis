@@ -1,9 +1,26 @@
 from math import ceil
+from pathlib import Path
+
+import pandas as pd
 from scipy.stats import norm
 
-# Baseline D30 retention among project creators
-# who did not invite a teammate.
-baseline_rate = 0.2624
+# Both variants include everyone who creates a first project.
+root = Path(__file__).resolve().parents[1]
+users = pd.read_csv(root / "data/users.csv", parse_dates=["signup_date"])
+events = pd.read_csv(root / "data/events.csv", parse_dates=["event_timestamp"])
+
+projects = events[events["event_name"] == "project_created"]
+eligible = users[users["user_id"].isin(projects["user_id"])].copy()
+
+views = events[events["event_name"] == "dashboard_viewed"].merge(
+    eligible[["user_id", "signup_date"]], on="user_id"
+)
+days_since_signup = views["event_timestamp"] - views["signup_date"]
+retained_ids = set(views.loc[
+    (days_since_signup >= pd.Timedelta(days=30))
+    & (days_since_signup < pd.Timedelta(days=41)), "user_id"
+])
+baseline_rate = eligible["user_id"].isin(retained_ids).mean()
 
 # Target = 5 percentage point absolute improvement in D30 retention.
 mde = 0.05
@@ -36,6 +53,7 @@ total_sample_size = sample_size_per_variant * 2
 print("Experiment Design")
 print("-----------------")
 print(f"Baseline rate: {baseline_rate:.2%}")
+print(f"Eligible project creators in dataset: {len(eligible)}")
 print(f"Expected treatment rate: {treatment_rate:.2%}")
 print(f"Minimum detectable effect: {mde:.2%}")
 print(f"Alpha: {alpha}")

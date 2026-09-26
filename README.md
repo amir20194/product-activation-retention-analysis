@@ -274,15 +274,15 @@ This acts as a leading indicator showing whether the treatment actually changes 
 
 - Report creation rate
 - Integration connection rate
-- Cancellation or uninstall rate
+- Invite prompt dismissal rate (requires a new event)
 
 ### Experiment Parameters
 
-Baseline D30 retention among project creators who did not invite a teammate: **26.24%**
+Baseline D30 retention among **all eligible project creators**: **39.36%**
 
 Minimum detectable effect: **+5 percentage points**
 
-Expected treatment retention: **31.24%**
+Expected treatment retention: **44.36%**
 
 Statistical assumptions:
 
@@ -290,11 +290,11 @@ Statistical assumptions:
 - Statistical power: 80%
 - Two-sided test
 
-Required sample size: **1,285 users per variant**
+Required sample size: **1,527 users per variant**
 
-Total experiment sample: **2,570 users**
+Total experiment sample: **3,054 users**
 
-The experiment should run until the required sample is reached and users have had enough time to complete the retention observation window.
+The 26.24% retention rate for non-inviters is an observational segment, not the control baseline: randomization would include all project creators in both variants. The sample size is a normal approximation for two independent proportions. At the synthetic dataset's pace of 2,264 project creators in six months, enrollment would take roughly eight months; wait a further 40 days after the last signup for complete observation. Do not stop when the dashboard first shows a low p-value.
 
 ---
 
@@ -324,6 +324,7 @@ product-activation-retention-analysis/
 │   ├── users.csv
 │   └── events.csv
 ├── sql/
+│   ├── 00_setup.sql
 │   ├── 01_kpis.sql
 │   ├── 02_funnel.sql
 │   ├── 03_retention.sql
@@ -339,6 +340,21 @@ product-activation-retention-analysis/
 │       └── retention_by_cohort.png
 └── requirements.txt
 ```
+
+---
+
+## Reproduce the analysis
+
+From the repository root, install the four packages in `requirements.txt` and run:
+
+```bash
+python -m pip install -r requirements.txt
+python python/generate_data.py
+python python/visualizations.py
+python python/experiment_analysis.py
+```
+
+`generate_data.py` uses seed 42 and overwrites the two CSVs. The chart script reads the CSVs and overwrites the three chart images; its values are calculated from the data. To run the MySQL 8 queries, create a database, run `sql/00_setup.sql` in it, and import the two CSV files with MySQL Workbench's Table Data Import Wizard (match the existing column names and types). Run `sql/01_kpis.sql` through `sql/04_activation_analysis.sql` in order. The CSVs and charts in this repository are the outputs from seed 42.
 
 ---
 
