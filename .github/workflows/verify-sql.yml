@@ -1,0 +1,84 @@
+name: Verify SQL
+
+on:
+  push:
+    paths:
+      - 'sql/**'
+      - 'data/**'
+      - '.github/workflows/verify-sql.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start MySQL 8
+        run: |
+          docker run -d --name funnel-mysql \
+            -e MYSQL_ROOT_PASSWORD=verify \
+            -e MYSQL_DATABASE=product_analysis mysql:8.4
+          for attempt in {1..60}; do
+            if docker exec -e MYSQL_PWD=verify funnel-mysql mysqladmin ping -uroot --silent; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec -e MYSQL_PWD=verify funnel-mysql mysqladmin ping -uroot --silent
+
+      - name: Load CSVs and run the analysis
+        run: |
+          docker exec -i -e MYSQL_PWD=verify funnel-mysql \
+            mysql -uroot product_analysis < sql/00_setup.sql
+
+          python - <<'PY' > /tmp/load_data.sql
+          import csv
+          from pathlib import Path
+
+          for table in ("users", "events"):
+              with (Path("data") / f"{table}.csv").open(newline="") as file:
+                  reader = csv.reader(file)
+                  columns = next(reader)
+                  batch = []
+                  for row in reader:
+                      values = ["'" + value.replace("'", "''") + "'" for value in row]
+                      batch.append("(" + ",".join(values) + ")")
+                      if len(batch) == 250:
+                          print(f"INSERT INTO {table} ({','.join(columns)}) VALUES " + ",".join(batch) + ";")
+                          batch = []
+                  if batch:
+                      print(f"INSERT INTO {table} ({','.join(columns)}) VALUES " + ",".join(batch) + ";")
+          PY
+
+          docker exec -i -e MYSQL_PWD=verify funnel-mysql \
+            mysql -uroot product_analysis < /tmp/load_data.sql
+
+          for file in sql/0[1-4]_*.sql; do
+            docker exec -i -e MYSQL_PWD=verify funnel-mysql \
+              mysql -uroot --batch --skip-column-names product_analysis < "$file" \
+              > "/tmp/$(basename "$file").txt"
+          done
+
+          python - <<'PY'
+          from pathlib import Path
+
+          def rows(name):
+              return [line.split("\t") for line in
+                      Path(f"/tmp/{name}.txt").read_text().splitlines()]
+
+          assert rows("01_kpis.sql") == [["5000", "45.28", "17.82"]]
+          assert rows("02_funnel.sql") == [[
+              "5000", "4259", "85.18", "3201", "75.16", "2264", "70.73", "45.28"
+          ]]
+          retention = rows("03_retention.sql")
+          assert ["signup_month", "2026-02", "777", "154", "19.82"] in retention
+          assert ["platform", "Android", "1219", "238", "19.52"] in retention
+          behavior = rows("04_activation_analysis.sql")
+          assert ["1", "991", "557", "56.21"] in behavior
+          assert ["0", "1273", "334", "26.24"] in behavior
+          print("MySQL queries match the documented results")
+          PY
