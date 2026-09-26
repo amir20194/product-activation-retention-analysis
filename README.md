@@ -2,7 +2,9 @@
 
 ## Business Problem
 
-A fictional B2B SaaS product has seen steady signup growth, but long-term user retention has not improved.
+A fictional B2B SaaS product wants to understand why many new users do not reach first value or return later.
+
+Think of it as a shared reporting workspace: a user signs up to create a project, connect an integration, build a report, and work with colleagues. The dataset records an invitation sent, not whether a colleague accepted or collaborated.
 
 The product team wants to understand:
 
@@ -31,7 +33,7 @@ Teammate invitation therefore appears to be a strong behavioral signal associate
 
 However, this analysis shows association, not causation. More engaged users may simply be more likely to invite teammates.
 
-The recommended next step is an A/B test that encourages users to invite a teammate immediately after creating their first project.
+The largest immediate funnel investigation is onboarding completion (1,058 users lost). The specific retention hypothesis to test is a teammate invitation prompt after first project creation. The proposed D30 test needs a feasibility check because the current traffic would take about eight months to enroll.
 
 ---
 
@@ -57,6 +59,23 @@ A user is considered retained if they generate a `dashboard_viewed` event betwee
 This is a 30–40 day retention window rather than exact-day D30 retention.
 
 Observed retention rate: **17.82%**
+
+---
+
+## KPI Framework
+
+The current data supports a funnel and one return window. A product team would need a wider lifecycle view before deciding whether better activation creates lasting value.
+
+| Stage | Metric and denominator | Status |
+|---|---|---|
+| Acquisition | Signups by channel | Measured; acquisition cost is unavailable |
+| Activation | Project creators within 7 days / signups | Measured: 45.28% |
+| Early collaboration | Project creators inviting a teammate / project creators | Measurable; invitation acceptance is not tracked |
+| Engagement | Users creating or viewing a report in a week / eligible users | Requires repeated usage events and a defined observation period |
+| Retention | Dashboard viewers on days 30–40 / signups | Measured: 17.82%; a narrow activity proxy |
+| Longer-term value | Day 60/90 return, repeat report use, paid conversion, value per acquired user | Not measurable from this dataset; requires later events and billing data |
+
+For a real team product, I would also track active teams, but this dataset has no `team_id`. I would not substitute invitation sends for accepted invitations or claim revenue impact from these files.
 
 ---
 
@@ -240,6 +259,8 @@ The proposed product intervention is:
 
 The prompt should appear after first project creation rather than at the beginning of onboarding so that users experience some product value before being asked to collaborate.
 
+**Priority:** First inspect the onboarding-started → completed journey, where 1,058 users were lost, using step-level events and user feedback. In parallel, validate whether an invitation is accepted and leads to shared use. Only then prioritize building the prompt. This separates the larger funnel opportunity from the narrower retention hypothesis.
+
 ---
 
 ## Proposed Experiment
@@ -295,6 +316,14 @@ Required sample size: **1,527 users per variant**
 Total experiment sample: **3,054 users**
 
 The 26.24% retention rate for non-inviters is an observational segment, not the control baseline: randomization would include all project creators in both variants. The sample size is a normal approximation for two independent proportions. At the synthetic dataset's pace of 2,264 project creators in six months, enrollment would take roughly eight months; wait a further 40 days after the last signup for complete observation. Do not stop when the dashboard first shows a low p-value.
+
+### Business case and test decision
+
+The +5 percentage-point MDE is a planning assumption, not a value established by this dataset. At roughly 377 eligible project creators per month, that lift would mean about **19 additional retained users per month** (377 × 0.05). To decide whether this is worth building, estimate the contribution margin of an additional retained user and compare `19 × margin` with the monthly cost of the prompt and any support burden. Pricing, costs, and paid outcomes are absent here, so a monetary ROI would be invented. If the smallest worthwhile lift is lower than five points, recalculate sample size and duration before launch.
+
+Randomize users 50/50 when they create their first project, keep the assignment fixed, and log the assignment and prompt exposure once per user. Predefine the same signup-based day 30–40 window for both arms. Check for missing exposure logs, duplicate users, and sample-ratio mismatch (pause to investigate if a 50/50 chi-square check has p < 0.001). Do not treat invitation sends as proof that teammates joined.
+
+At the planned sample size and after the last user has a full 40-day window, compare user-level retention with a two-sided 95% confidence interval. Recommend rollout only if the interval excludes zero, the observed lift is at least the commercially justified threshold, and report creation and integration connection show no material harm. Agree guardrail limits before launch; a provisional trigger is a drop of more than two absolute percentage points in either rate, reviewed with its uncertainty. If invitation rate rises but retention does not, iterate or stop the prompt; if tracking or randomization fails, fix it before drawing a conclusion. With the current synthetic traffic, the eight-month enrollment is a warning: validate the commercial case and traffic first, or choose a shorter **validated** leading metric for a separate test rather than quietly changing this test's primary metric.
 
 ---
 
