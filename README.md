@@ -349,6 +349,7 @@ In a production environment, the analysis would also require validation of event
 ```text
 product-activation-retention-analysis/
 ├── README.md
+├── .github/workflows/verify-sql.yml
 ├── data/
 │   ├── users.csv
 │   └── events.csv
@@ -383,7 +384,7 @@ python python/visualizations.py
 python python/experiment_analysis.py
 ```
 
-`generate_data.py` uses seed 42 and overwrites the two CSVs. The chart script reads the CSVs and overwrites the three chart images; its values are calculated from the data. To run the MySQL 8 queries, create a database, run `sql/00_setup.sql` in it, and import the two CSV files with MySQL Workbench's Table Data Import Wizard (match the existing column names and types). Run `sql/01_kpis.sql` through `sql/04_activation_analysis.sql` in order. The CSVs and charts in this repository are the outputs from seed 42.
+`generate_data.py` uses seed 42 and overwrites the two CSVs. The chart script reads the CSVs and overwrites the three chart images; its values are calculated from the data. The [Verify SQL workflow](.github/workflows/verify-sql.yml) loads both CSVs into a temporary MySQL 8 instance on GitHub Actions, runs all four analysis files, and checks key results against this README. It requires no local database. For a manual run, create a MySQL database, run `sql/00_setup.sql`, import users.csv before events.csv, then run `sql/01_kpis.sql` through `sql/04_activation_analysis.sql`. The CSVs and charts in this repository are the outputs from seed 42.
 
 ---
 
