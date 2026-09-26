@@ -23,12 +23,14 @@ jobs:
             -e MYSQL_ROOT_PASSWORD=verify \
             -e MYSQL_DATABASE=product_analysis mysql:8.4
           for attempt in {1..60}; do
-            if docker exec -e MYSQL_PWD=verify funnel-mysql mysqladmin ping -uroot --silent; then
+            if docker exec -e MYSQL_PWD=verify funnel-mysql \
+              mysql -uroot product_analysis -e 'SELECT 1' > /dev/null 2>&1; then
               break
             fi
             sleep 2
           done
-          docker exec -e MYSQL_PWD=verify funnel-mysql mysqladmin ping -uroot --silent
+          docker exec -e MYSQL_PWD=verify funnel-mysql \
+            mysql -uroot product_analysis -e 'SELECT 1'
 
       - name: Load CSVs and run the analysis
         run: |
